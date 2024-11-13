@@ -144,7 +144,7 @@ function install_tool {
 function parse_version {
     local tool="${1?Name of the tool is required as the first argument}"
     if [[ "$tool" == "ffmpeg" ]]; then local dashes="-"; else local dashes="--"; fi
-    local version_cmd="${tool} ${dashes}version |& head -1"
+    local version_cmd="${tool} ${dashes}version 2>&1 | head -1"
 
     local version_raw="$(eval "$version_cmd")"
     local version=$(echo "$version_raw" | sed -E -n "s|[^0-9]*([0-9.]*).*|\1|pi")
@@ -197,7 +197,7 @@ function check_auth {
     case "$tool" in
         git)
             domain="github.com"
-            auth_check_command="ssh -T git@github.com |& grep -iq successfully"
+            auth_check_command="ssh -T git@github.com 2>&1 | grep -iq successfully"
             ;;
         gh)
             domain="github.com"
@@ -205,7 +205,7 @@ function check_auth {
             ;;
         docker)
             domain="ghcr.io"
-            auth_check_command="docker login $domain <&- |& grep -iq succeeded"
+            auth_check_command="docker login $domain <&- 2>&1 | grep -iq succeeded"
             ;;
         rclone)
             domain="google.com/drive"
