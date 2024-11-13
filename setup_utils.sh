@@ -2,8 +2,8 @@
 #
 # Script to check/setup/authenticated common system tools: git, gh, docker, rclone, jq, yq, ffmpeg
 #
-# ./setup_tools.sh        - checks all tools if installed and authenticated
-# ./setup_tools.sh <tool> - install and authenticate a tool
+# ./setup_utils.sh        - checks all tools if installed and authenticated
+# ./setup_utils.sh <name> - install and authenticate a tool
 
 set -o nounset
 
@@ -63,7 +63,7 @@ function log
     if [[ "${level?}" == "success" ]]; then
         icon="✅"
     elif [[ "${level?}" == "warning" ]]; then
-        icon="⚠️ "
+        icon="⚠️"
     elif [[ "${level?}" == "error" ]]; then
         icon="❌"
     fi
@@ -144,7 +144,7 @@ function install_tool {
 function parse_version {
     local tool="${1?Name of the tool is required as the first argument}"
     if [[ "$tool" == "ffmpeg" ]]; then local dashes="-"; else local dashes="--"; fi
-    local version_cmd="${tool} ${dashes}version |& head -1"
+    local version_cmd="${tool} ${dashes}version 2>&1 | head -1"
 
     local version_raw="$(eval "$version_cmd")"
     local version=$(echo "$version_raw" | sed -E -n "s|[^0-9]*([0-9.]*).*|\1|pi")
@@ -179,14 +179,14 @@ function check_tool {
         return 3
     fi
 
-    local log_type="success"
     local auth_msg
     auth_msg=$(check_auth "$tool")
     if [[ $? -ne 0 ]]; then
-        log_type="warning"
+        log "warning" "$tool" "$version" "$auth_msg"
+        return 4
     fi
 
-    log "$log_type" "$tool" "$version" "$auth_msg"
+    log "success" "$tool" "$version" "$auth_msg"
 }
 
 
@@ -197,7 +197,7 @@ function check_auth {
     case "$tool" in
         git)
             domain="github.com"
-            auth_check_command="ssh -T git@github.com |& grep -iq successfully"
+            auth_check_command="ssh -T git@github.com 2>&1 | grep -iq successfully"
             ;;
         gh)
             domain="github.com"
@@ -205,7 +205,7 @@ function check_auth {
             ;;
         docker)
             domain="ghcr.io"
-            auth_check_command="docker login $domain <&- |& grep -iq succeeded"
+            auth_check_command="docker login $domain <&- 2>&1 | grep -iq succeeded"
             ;;
         rclone)
             domain="google.com/drive"
@@ -233,7 +233,7 @@ function check_auth {
     if [[ $auth_status -eq 0 ]]; then
         message="$domain";
     else
-        message="$tool is not authenticated to $domain. Run 'setup_tools.sh $tool'";
+        message="$tool is not authenticated to $domain. Run '${0} $tool'";
     fi
     echo "$message"
     return $auth_status
