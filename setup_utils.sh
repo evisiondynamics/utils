@@ -29,7 +29,7 @@ function main {
     status=$((status + $?))
     check_tool jq
     status=$((status + $?))
-    check_tool yq 4.16.0
+    check_tool yq 4.44.3
     status=$((status + $?))
     check_tool docker 27.3.0
     status=$((status + $?))
@@ -114,7 +114,14 @@ function install_tool {
     fi
 
     if [[ $tool == "yq" && $os == "Linux" ]]; then
-        sudo add-apt-repository --yes --update ppa:rmescandon/yq
+        mkdir -p ~/.local/bin
+        # TODO: parametrize version
+        curl --output ~/.local/bin/yq --location \
+            https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+        if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+            echo "export PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
+        fi
+        return 0
     fi
 
     # TODO: mark/hold the installed package
