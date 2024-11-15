@@ -125,7 +125,6 @@ function install_tool {
         # TODO: parametrize version
         curl --output ~/.local/bin/yq --location \
             https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
-            chmod +x ~/.local/bin/yq
         if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
             echo "export PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
         fi
