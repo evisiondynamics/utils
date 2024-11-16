@@ -22,21 +22,13 @@ function main {
     printf "${u}%10s${n}  ${u}%7s${n}  ${u}%s${n}\n" "Name" "Version" "Logged in"
 
     local status=0
-
-    check_tool git
-    status=$((status + $?))
-    check_tool gh
-    status=$((status + $?))
-    check_tool jq
-    status=$((status + $?))
-    check_tool yq 4.44.3
-    status=$((status + $?))
-    check_tool docker 27.3.0
-    status=$((status + $?))
-    check_tool rclone
-    status=$((status + $?))
-    check_tool ffmpeg
-    status=$((status + $?))
+    check_tool git            ;status=$((status + $?))
+    check_tool gh 2.50.0      ;status=$((status + $?))
+    check_tool jq             ;status=$((status + $?))
+    check_tool yq 4.44.3      ;status=$((status + $?))
+    check_tool docker 27.3.0  ;status=$((status + $?))
+    check_tool rclone 1.53.0  ;status=$((status + $?))
+    check_tool ffmpeg         ;status=$((status + $?))
 
     echo ""
     return $status
@@ -258,8 +250,12 @@ function auth_git {
     ssh-keygen -b 2048 -t rsa -f ~/.ssh/eagle_github -q -N ""
     echo "Copy ~/.ssh/eagle_github.pub key below to clipboard"
     cat ~/.ssh/eagle_github.pub
-    echo "Paste key value at github.com/settings/ssh/new and save it"
-    echo "Re-run setup again"
+    if gh auth status >& /dev/null; then
+        : # add ssh key via gh
+    else
+        echo "Paste key manually at github.com/settings/ssh/new and save it"
+        echo "Re-run setup again"
+    fi
 }
 
 
