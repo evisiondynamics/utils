@@ -10,9 +10,11 @@ set -o nounset
 function main {
     # install single tool
     local tool="${1:-}"
-    local token="${2:-}"
+    local version="${2:-}"
+    local token="${3:-}"
+
     if [[ -n "$tool" ]]; then
-        install_tool "$tool" "$token"
+        install_tool "$tool" "$version" "$token"
         return $?
     fi
 
@@ -41,9 +43,7 @@ function main {
 
 function command_exists { command -v "${1?}" &> /dev/null; }
 
-
 function version_lte { [[  "$1" = "$(echo -e "$1\n$2" | sort --version-sort | head --lines=1)" ]]; }
-
 
 function log
 {
@@ -66,26 +66,38 @@ function log
 # install and authenticate tool
 function install_tool {
     local tool="${1?Name of the tool is required as the first argument}"
-    local token="${2:-}"
+    local version="${2:-}"
+    local token="${3:-}"
     local os="$(uname)"
 
-    if command_exists "$tool"; then
-        echo "$tool is already installed"
-        local auth_msg
+    local check_msg
+    local check_status
+    check_msg=$(check_tool "$tool" "$version")
+    check_status=$?
 
-        auth_msg=$(check_auth "$tool")
-        auth_status=$?
-        if [[ $auth_status -eq 0 && $auth_msg != "-" ]]; then
-            echo "$tool is already authenticated: $auth_msg"
-            return 0
-        fi
-
-        if [[ $(type -t "auth_${tool}") == "function" ]]; then
-            eval "auth_${tool} $token"
-        fi
-
-        return 0
-    fi
+    case "$check_status" in
+        0)  echo "$tool is already installed (debug: $check_msg) and meets the requested version v$version"
+            return 1
+            ;;
+        1)  ;;  # not installed, proceed with installation
+        2)  echo "Failed to parse version '$tool --version'. Uninstall $tool manually and re-run setup"
+            return 2
+            ;;
+        3)  echo "$tool version (debug: $check_msg) is lower than required v$version. Uninstall $tool manually and re-run setup"
+            return 3
+            ;;
+        4)  echo "$tool is installed, but not authenticated (debug: $check_msg). Proceeding with authentication..."
+            local auth_status
+            if [[ $check_msg != *"-"* && $(type -t "auth_${tool}") == "function" ]]; then
+                eval "auth_${tool} $token"
+                auth_status=$?
+            fi
+            return $auth_status
+            ;;
+        *)
+            echo "Unknown check status ($check_status) for $tool"
+            ;;
+    esac
 
     echo -e "Installing $tool...\n"
 
@@ -127,10 +139,14 @@ function install_tool {
                 sudo apt-get update --yes --quiet
                 echo ""
             fi
-            sudo apt-get install --upgrade --yes --quiet "$tool"
+            version=${version:+=$version}  # replace with "=$version" if $version defined
+            sudo apt-get install --upgrade --yes --quiet "$tool$version"
+            [[ -n "$version" ]] && sudo apt-mark unhold "$tool"
             ;;
         Darwin*)
-            brew install "$tool"
+            version=${version:+=$version}  # replace with "@$version" if $version defined
+            brew install "$tool$version"
+            [[ -n "$version" ]] && brew pin someformula "$tool"
             ;;
         *) echo "$os not supported" ;;
     esac
@@ -158,7 +174,7 @@ function parse_version {
 }
 
 
-# check if tool is installed, its version and authentication status
+# check if tool is installed, verify version and authentication status
 function check_tool {
     local tool="${1?Name of the tool is required as the first argument}"
     local version_required="${2:-0.0.0}"  # required version (optional)
