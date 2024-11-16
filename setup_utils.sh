@@ -24,8 +24,8 @@ function main {
     printf "${u}%10s${n}  ${u}%7s${n}  ${u}%s${n}\n" "Name" "Version" "Logged in"
 
     local status=0
-    check_tool git            ;status=$((status + $?))
     check_tool gh             ;status=$((status + $?))
+    check_tool git            ;status=$((status + $?))
     check_tool jq             ;status=$((status + $?))
     check_tool yq 4.44.3      ;status=$((status + $?))
     check_tool docker 27.3.0  ;status=$((status + $?))
@@ -109,6 +109,7 @@ function install_tool {
 
     echo -e "\nInstalling $tool..."
 
+    # special case for docker
     # TODO: docker install script
     if [[ $tool == "docker" ]]; then
         grep -q WSL /proc/version && os="WSL"  # in Windows, docker must be installed on Windows host, not on WSL Ubuntu
@@ -159,11 +160,13 @@ function install_tool {
                 sudo apt-get update --yes --quiet
                 echo ""
             fi
+
             version=${version:+=$version}  # replace with "=$version" if $version defined
             sudo apt-get install --upgrade --yes --quiet "$tool$version"
             [[ $? -ne 0 ]] && exit 2
             [[ -n "$version" ]] && sudo apt-mark hold "$tool"
             ;;
+
         Darwin*)
             version=${version:+=$version}  # replace with "@$version" if $version defined
             brew install "$tool$version"
@@ -244,6 +247,10 @@ function check_auth {
             domain="ghcr.io"
             auth_check_command="docker login $domain <&- 2>&1 | grep -iq succeeded"
             ;;
+        dvc)
+            domain="google.com/drive"
+            auth_check_command="dvc status --cloud >& /dev/null"
+            ;;
         rclone)
             domain="google.com/drive"
             auth_check_command="rclone config show eagledrive >& /dev/null"
@@ -281,6 +288,19 @@ function check_auth {
 ########################### authenticattion ####################################
 ################################################################################
 
+function auth_gh {
+    local token=${1:-}
+
+    if [[ -n "$token" ]]; then
+        echo "Logining in gh to github.com with token..."
+        gh auth login --with-token <<< "$token"
+        return $?
+    fi
+
+    echo "Logining in gh to github.com interactively via browser"
+    gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web
+}
+
 
 function auth_git {
     echo "Generating ssh key pair for github.com"
@@ -295,20 +315,6 @@ function auth_git {
         echo "Paste the key manually to github.com/settings/ssh/new and press Save"
         echo "Re-run setup again"
     fi
-}
-
-
-function auth_gh {
-    local token=${1:-}
-
-    if [[ -n "$token" ]]; then
-        echo "Logining in gh to github.com with token..."
-        gh auth login --with-token <<< "$token"
-        return $?
-    fi
-
-    echo "Logining in gh to github.com interactively via browser"
-    gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web
 }
 
 
@@ -351,6 +357,25 @@ function auth_rclone {
     local target_remote="eagledrive"
     echo "Logining in rclone to Eagle Google Drive..."
     rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
+}
+
+function auth_dvc {
+    local client_id=$(dvc config remote.gdrive.gdrive_client_id)
+    local client_secret=$(dvc config remote.gdrive.gdrive_client_secret)
+
+    if [[ ! -f .dvc/config ]]; then
+        echo "No .dvc/config found, dvc can be authenticated only within project where dvc is configured"
+        return 1
+    fi
+
+    if [[ -z $client_id || -z $client_secret ]]; then
+        echo "OAuth client creds are missing, they are required for dvc authorization to Google Drive API."
+        echo "Contact your cloud administrator, for details visit:"
+        echo "https://dvc.org/doc/user-guide/data-management/remote-storage/google-drive#using-a-custom-google-cloud-project-recommended"
+        return 2
+    fi
+
+    dvc statuc --cloud
 }
 
 ################################################################################
