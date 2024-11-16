@@ -25,11 +25,11 @@ function main {
 
     local status=0
     check_tool git            ;status=$((status + $?))
-    check_tool gh 2.50.0      ;status=$((status + $?))
+    check_tool gh             ;status=$((status + $?))
     check_tool jq             ;status=$((status + $?))
     check_tool yq 4.44.3      ;status=$((status + $?))
     check_tool docker 27.3.0  ;status=$((status + $?))
-    check_tool rclone 1.53.0  ;status=$((status + $?))
+    check_tool rclone         ;status=$((status + $?))
     check_tool ffmpeg         ;status=$((status + $?))
 
     echo ""
@@ -78,7 +78,11 @@ function install_tool {
 
     case "$check_status" in
         0)  curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
-            echo "$tool v$curr_version is already installed and meets the requested version v$version"
+            if [[ -n $version ]]; then
+                echo "$tool v$curr_version is already installed and meets the requested version v$version"
+            else
+                echo "$tool is already installed"
+            fi
             return 1
             ;;
         1)  ;;  # not installed, proceed with installation
@@ -89,7 +93,7 @@ function install_tool {
             echo "$tool version v$curr_version is lower than required v$version. Uninstall $tool manually and re-run setup"
             return 3
             ;;
-        4)  echo "$tool is installed, but not authenticated (debug: $check_msg). Proceeding with authentication..."
+        4)  echo "$tool is installed, but not authenticated. Proceeding with authentication..."
             local auth_status
             if [[ $check_msg != *"-"* && $(type -t "auth_${tool}") == "function" ]]; then
                 eval "auth_${tool} $token"
@@ -102,7 +106,7 @@ function install_tool {
             ;;
     esac
 
-    echo -e "Installing $tool...\n"
+    echo -e "\nInstalling $tool..."
 
     # TODO: docker install script
     if [[ $tool == "docker" ]]; then
@@ -122,16 +126,18 @@ function install_tool {
 
     if [[ $tool == "yq" && $os == "Linux" ]]; then
         mkdir -p ~/.local/bin
-        # TODO: parametrize version
-        curl --output ~/.local/bin/yq --location \
-            https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+        local url="https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64"
+        echo "Downaloding $url"
+        curl --show-error --fail --output ~/.local/bin/yq --location "$url"
+        [[ $? -ne 0 ]] && exit 1
+        chmod +x ~/.local/bin/yq
+
         if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
             echo "export PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
         fi
         return 0
     fi
 
-    # TODO: mark/hold the installed package
     case "$os" in
         Linux*)
             # check if update cache was last updated more then 24h ago
@@ -143,12 +149,13 @@ function install_tool {
             fi
             version=${version:+=$version}  # replace with "=$version" if $version defined
             sudo apt-get install --upgrade --yes --quiet "$tool$version"
-            [[ -n "$version" ]] && sudo apt-mark unhold "$tool"
+            [[ $? -ne 0 ]] && exit 2
+            [[ -n "$version" ]] && sudo apt-mark hold "$tool"
             ;;
         Darwin*)
             version=${version:+=$version}  # replace with "@$version" if $version defined
             brew install "$tool$version"
-            [[ -n "$version" ]] && brew pin someformula "$tool"
+            [[ -n "$version" ]] && brew pin "$tool"
             ;;
         *) echo "$os not supported" ;;
     esac
@@ -179,10 +186,10 @@ function parse_version {
 # check if tool is installed, verify version and authentication status
 function check_tool {
     local tool="${1?Name of the tool is required as the first argument}"
-    local version_required="${2:-0.0.0}"  # required version (optional)
+    local version_required="${2:-}"  # required version (optional)
 
     if ! command_exists "$tool"; then
-        log error "$tool" " Not installed. Run '${0} $tool'"
+        log error "$tool" " Not installed. Run: ${0} $tool $version_required"
         return 1
     fi
 
@@ -192,8 +199,8 @@ function check_tool {
         return 2
     fi
 
-    if ! version_lte "$version_required" "$version"; then
-        log warning "$tool" "$version" "required: $version_required. Run '${0} yq $version_required'"
+    if ! version_lte "${version_required:-0.0.0}" "$version"; then
+        log warning "$tool" "$version" "required v$version_required. Run: ${0} $tool $version_required"
         return 3
     fi
 
@@ -251,7 +258,7 @@ function check_auth {
     if [[ $auth_status -eq 0 ]]; then
         message="$domain";
     else
-        message="$tool is not authenticated to $domain. Run '${0} $tool'";
+        message="$tool is not authenticated to $domain. Run: ${0} $tool";
     fi
     echo "$message"
     return $auth_status
