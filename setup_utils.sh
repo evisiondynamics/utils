@@ -69,6 +69,7 @@ function install_tool {
     local version="${2:-}"
     local token="${3:-}"
     local os="$(uname)"
+    local curr_version
 
     local check_msg
     local check_status
@@ -76,14 +77,16 @@ function install_tool {
     check_status=$?
 
     case "$check_status" in
-        0)  echo "$tool is already installed (debug: $check_msg) and meets the requested version v$version"
+        0)  curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
+            echo "$tool v$curr_version is already installed and meets the requested version v$version"
             return 1
             ;;
         1)  ;;  # not installed, proceed with installation
         2)  echo "Failed to parse version '$tool --version'. Uninstall $tool manually and re-run setup"
             return 2
             ;;
-        3)  echo "$tool version (debug: $check_msg) is lower than required v$version. Uninstall $tool manually and re-run setup"
+        3)  curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
+            echo "$tool version v$curr_version is lower than required v$version. Uninstall $tool manually and re-run setup"
             return 3
             ;;
         4)  echo "$tool is installed, but not authenticated (debug: $check_msg). Proceeding with authentication..."
@@ -191,7 +194,7 @@ function check_tool {
     fi
 
     if ! version_lte "$version_required" "$version"; then
-        log warning "$tool" "$version" "required: $version_required"
+        log warning "$tool" "$version" "required: $version_required. Run '${0} yq $version_required'"
         return 3
     fi
 
