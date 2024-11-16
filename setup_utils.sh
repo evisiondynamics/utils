@@ -29,6 +29,7 @@ function main {
     check_tool jq             ;status=$((status + $?))
     check_tool yq 4.44.3      ;status=$((status + $?))
     check_tool docker 27.3.0  ;status=$((status + $?))
+    check_tool dvc 3.56.0     ;status=$((status + $?))
     check_tool rclone         ;status=$((status + $?))
     check_tool ffmpeg         ;status=$((status + $?))
 
@@ -124,6 +125,7 @@ function install_tool {
         return 0
     fi
 
+    # special case for yq
     if [[ $tool == "yq" && $os == "Linux" ]]; then
         mkdir -p ~/.local/bin
         local url="https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64"
@@ -136,6 +138,16 @@ function install_tool {
             echo "export PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
         fi
         return 0
+    fi
+
+    # special case for dvc
+    if [[ $tool == "dvc" && $os == "Linux" ]] && ! apt-cache show dvc; then
+        # source: https://dvc.org/doc/install/linux
+        sudo wget https://dvc.org/deb/dvc.list -O /etc/apt/sources.list.d/dvc.list
+        wget -qO - https://dvc.org/deb/iterative.asc | gpg --dearmor > packages.iterative.gpg
+        sudo install -o root -g root -m 644 packages.iterative.gpg /etc/apt/trusted.gpg.d/
+        rm -f packages.iterative.gpg
+        sudo apt update --yes --quiet
     fi
 
     case "$os" in
@@ -273,12 +285,14 @@ function check_auth {
 function auth_git {
     echo "Generating ssh key pair for github.com"
     ssh-keygen -b 2048 -t rsa -f ~/.ssh/eagle_github -q -N ""
-    echo "Copy ~/.ssh/eagle_github.pub key below to clipboard"
-    cat ~/.ssh/eagle_github.pub
+    ls -alF ~/.ssh/eagle_github*
     if gh auth status >& /dev/null; then
-        : # add ssh key via gh
+        echo "Adding puglic key to github.com via gh"
+        gh ssh-key add --title eagle ~/.ssh/eagle_github.pub
     else
-        echo "Paste key manually at github.com/settings/ssh/new and save it"
+        echo "Copy ~/.ssh/eagle_github.pub key below to clipboard"
+        cat ~/.ssh/eagle_github.pub
+        echo "Paste the key manually to github.com/settings/ssh/new and press Save"
         echo "Re-run setup again"
     fi
 }
