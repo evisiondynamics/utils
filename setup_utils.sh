@@ -8,6 +8,8 @@
 set -o nounset
 
 function main {
+    check_quartz
+
     # install single tool
     local tool="${1:-}"
     local version="${2:-}"
@@ -284,6 +286,23 @@ function check_auth {
 }
 
 
+function check_quartz {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        return 0
+    fi
+
+    if ! brew list xquartz &> /dev/null; then
+        echo "XQuartz is required for GUI applications on macOS. Install it manually:"
+        echo "brew install --cask xquartz"
+        echo ""
+        echo "XQuartz notes on first install:"
+        echo "- Launch XQuartz. Under the XQuartz menu, select Preferences"
+        echo "- Go to the security tab and ensure \"Allow connections from network clients\" is checked."
+        exit 1
+    fi
+}
+
+
 ################################################################################
 ########################### authenticattion ####################################
 ################################################################################
@@ -379,5 +398,6 @@ function auth_dvc {
 }
 
 ################################################################################
+
 
 main "$@"
