@@ -8,6 +8,8 @@
 set -o nounset
 
 function main {
+    [[ ! $(uname) =~ Linux|Darwin ]] && { echo "$(uname) is not supported"; exit 1; }
+
     check_quartz
 
     # install single tool
@@ -72,16 +74,15 @@ function install_tool {
     local version="${2:-}"
     local token="${3:-}"
     local os="$(uname)"
-    local curr_version
 
     local check_msg
     local check_status
     check_msg=$(check_tool "$tool" "$version")
     check_status=$?
 
+    local curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
     case "$check_status" in
-        0)  curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
-            if [[ -n $version ]]; then
+        0)  if [[ -n $version ]]; then
                 echo "$tool v$curr_version is already installed and meets the requested version v$version"
             else
                 echo "$tool is already installed"
@@ -92,8 +93,7 @@ function install_tool {
         2)  echo "Failed to parse version '$tool --version'. Uninstall $tool manually and re-run setup"
             return 2
             ;;
-        3)  curr_version=$(echo "$check_msg" | cut -d ' ' -f3)
-            echo "$tool version v$curr_version is lower than required v$version. Uninstall $tool manually and re-run setup"
+        3)  echo "$tool version v$curr_version is lower than required v$version. Uninstall $tool manually and re-run setup"
             return 3
             ;;
         4)  echo "$tool is installed, but not authenticated. Proceeding with authentication..."
@@ -104,8 +104,8 @@ function install_tool {
             fi
             return $auth_status
             ;;
-        *)
-            echo "Unknown check status ($check_status) for $tool"
+        *)  echo "Unexpected check status ($check_status) for $tool"
+            return 4
             ;;
     esac
 
@@ -174,7 +174,8 @@ function install_tool {
             brew install "$tool$version"
             [[ -n "$version" ]] && brew pin "$tool"
             ;;
-        *) echo "$os not supported" ;;
+
+        *) echo "$os not supported. For Windows, setup WSL/Ubuntu and run ${0} there" ;;
     esac
 
     if [[ $(type -t "auth_${tool}") == "function" ]]; then
