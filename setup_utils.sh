@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Script to check/setup/authenticated common system tools: git, gh, docker, rclone, jq, yq, ffmpeg
+# Script to check/setup/authenticated common system tools: git, gh, dvc, docker, rclone, jq, yq, ffmpeg
 #
-# ./setup_utils.sh        - checks all tools if installed and authenticated
-# ./setup_utils.sh <name> - install and authenticate a tool
+# Command line args:
+# <_>    - if nor args, check each tol if installed and authenticated
+# <name> - install and authenticate tool by name
 
 set -o nounset
 
@@ -155,7 +156,7 @@ function install_tool {
 
     case "$os" in
         Linux*)
-            # check if update cache was last updated more then 24h ago
+            # update cache only if the last update was more than 24h ago
             local update_stamp=/var/cache/apt/pkgcache.bin
             if [[ $(find "$update_stamp" -mmin +1140 -print -quit | wc -l) -ne 0 ]]; then
                 echo "Update apt cache.."
@@ -373,18 +374,12 @@ function auth_docker {
 }
 
 
-function auth_rclone {
-    local target_remote="eagledrive"
-    echo "Logining in rclone to Eagle Google Drive..."
-    rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
-}
-
 function auth_dvc {
     local client_id=$(dvc config remote.gdrive.gdrive_client_id)
     local client_secret=$(dvc config remote.gdrive.gdrive_client_secret)
 
     if [[ ! -f .dvc/config ]]; then
-        echo "No .dvc/config found, dvc can be authenticated only within project where dvc is configured"
+        echo "No .dvc/config found, dvc can be authenticated only within a project where dvc is configured"
         return 1
     fi
 
@@ -395,7 +390,14 @@ function auth_dvc {
         return 2
     fi
 
-    dvc statuc --cloud
+    dvc status --cloud
+}
+
+
+function auth_rclone {
+    local target_remote="eagledrive"
+    echo "Logining in rclone to Eagle Google Drive..."
+    rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
 }
 
 ################################################################################
