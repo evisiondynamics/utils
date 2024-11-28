@@ -397,6 +397,14 @@ function auth_dvc {
 
 function auth_rclone {
     local target_remote="eagledrive"
+
+    if [[ -n $SSH_CONNECTION ]]; then
+        local yellow="\033[0;33m"
+        local nc="\033[0m"
+        echo -ne "\n${yellow}To authenticate rclone on remote machine, " \
+            "run ssh tunnel on your local machine after rclone auth server is launched on remote${nc}: "
+        echo -e "ssh -L 53682:localhost:53682 -C -N -l <user_on_remote> <remote_host_or_ip>\n"
+    fi
     echo "Logining in rclone to Eagle Google Drive..."
     rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
 }
