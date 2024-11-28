@@ -342,15 +342,6 @@ function auth_git {
 function auth_docker {
     local token=${1:-}
 
-    if ! gh auth status &> /dev/null; then
-        echo "gh is not authenticated. Authenticate gh first '${0} gh', then re-run '${0} docker'."
-        echo "Or authenticate docker manually:"
-        echo "https://github.com/evisiondynamics/.github-private/blob/main/profile/tools.md#docker-setup"
-        return 1
-    fi
-
-    local username="$(gh api user | jq -r .login)"
-
     auth_msg=$(check_auth docker)
     auth_status=$?
     if [[ $auth_status -eq 0 ]]; then
@@ -361,16 +352,26 @@ function auth_docker {
         return 0
     fi
 
-    if [[ -n "$token" ]]; then
-        echo "Logining in docker to ghcr.io via token..."
-        echo "$token" | docker login ghcr.io -u "$username" --password-stdin
-        return $?
+    if ! gh auth status &> /dev/null; then
+        echo "Cannot authenticate docker automatically without 'gh' being authenticated first."
+        echo "Possible solutions:"
+        echo "1. Authenticate 'gh' first '${0} gh', and then re-run '${0} docker'"
+        echo "2. Follow docker authentication manual:"
+        echo "https://github.com/evisiondynamics/.github-private/blob/main/profile/tools.md#docker-setup"
+        return 10
     fi
 
-    echo "Logining in docker to ghcr.io is possible via tokens only."
-    echo "Generate a token at https://github.com/settings/tokens/new?scopes=write:packages"
-    echo "Then run '${0} docker <token>'"
-    return 0
+    local username="$(gh api user | jq -r .login)"
+
+    if [[ -n "$token" ]]; then
+        echo "Logining docker to ghcr.io with provided token..."
+    else
+        echo "Re-using 'gh' token for docker login..."
+        token=$(gh auth token)
+    fi
+
+    echo "$token" | docker login ghcr.io -u "$username" --password-stdin
+    return $?
 }
 
 
