@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Script to check/setup/authenticated common system tools: git, gh, dvc, docker, rclone, jq, yq, ffmpeg
+# Script to check/setup/authenticate common system tools: git, gh, dvc, docker, rclone, jq, yq, ffmpeg
 #
 # Command line args:
 # <_>    - if nor args, check each tol if installed and authenticated
@@ -401,10 +401,13 @@ function auth_rclone {
     if [[ -n $SSH_CONNECTION ]]; then
         local yellow="\033[0;33m"
         local nc="\033[0m"
-        echo -ne "\n${yellow}To authenticate rclone on remote machine, " \
-            "run ssh tunnel on your local machine after rclone auth server is launched on remote${nc}: "
-        echo -e "ssh -L 53682:localhost:53682 -C -N -l <user_on_remote> <remote_host_or_ip>\n"
+        echo -e "\n${yellow}To authenticate rclone on remote machine:"
+        echo "1. Wait until rclone auth url is available below in terminal"
+        echo "2. Open ssh tunnel, run this command on your local machine and leave it hanging (no output):"
+        echo "   ssh -L 53682:localhost:53682 -C -N -l <username_on_remote> <remote_host_or_ip>"
+        echo -e "3. Open auth url below in your browser on local machine${nc}\n"
     fi
+
     echo "Logining in rclone to Eagle Google Drive..."
     rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
 }
