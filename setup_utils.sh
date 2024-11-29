@@ -69,6 +69,38 @@ function log
 }
 
 
+# check if tool is installed, verify version and authentication status
+function check_tool {
+    local tool="${1?Name of the tool is required as the first argument}"
+    local version_required="${2:-}"  # required version (optional)
+
+    if ! command_exists "$tool"; then
+        log error "$tool" " Not installed. Run: ${0} $tool $version_required"
+        return 1
+    fi
+
+    local version="$(parse_version "$tool")"
+    if [[ ! "$version" =~ ^[0-9.]+$ ]]; then
+        log error "$tool" "$version"
+        return 2
+    fi
+
+    if ! version_lte "${version_required:-0.0.0}" "$version"; then
+        log warning "$tool" "$version" "required v$version_required. Run: ${0} $tool $version_required"
+        return 3
+    fi
+
+    local auth_msg
+    auth_msg=$(check_auth "$tool")
+    if [[ $? -ne 0 ]]; then
+        log "warning" "$tool" "$version" "$auth_msg"
+        return 4
+    fi
+
+    log "success" "$tool" "$version" "$auth_msg"
+}
+
+
 # install and authenticate tool
 function install_tool {
     local tool="${1?Name of the tool is required as the first argument}"
@@ -202,38 +234,6 @@ function parse_version {
 }
 
 
-# check if tool is installed, verify version and authentication status
-function check_tool {
-    local tool="${1?Name of the tool is required as the first argument}"
-    local version_required="${2:-}"  # required version (optional)
-
-    if ! command_exists "$tool"; then
-        log error "$tool" " Not installed. Run: ${0} $tool $version_required"
-        return 1
-    fi
-
-    local version="$(parse_version "$tool")"
-    if [[ ! "$version" =~ ^[0-9.]+$ ]]; then
-        log error "$tool" "$version"
-        return 2
-    fi
-
-    if ! version_lte "${version_required:-0.0.0}" "$version"; then
-        log warning "$tool" "$version" "required v$version_required. Run: ${0} $tool $version_required"
-        return 3
-    fi
-
-    local auth_msg
-    auth_msg=$(check_auth "$tool")
-    if [[ $? -ne 0 ]]; then
-        log "warning" "$tool" "$version" "$auth_msg"
-        return 4
-    fi
-
-    log "success" "$tool" "$version" "$auth_msg"
-}
-
-
 # check if tool is authenticated
 function check_auth {
     local tool="${1?Name of the tool is required as the first argument}"
@@ -252,8 +252,9 @@ function check_auth {
             auth_check_command="docker login $domain <&- 2>&1 | grep -iq succeeded"
             ;;
         dvc)
+            client_id=$([[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*")
             domain="google.com/drive"
-            auth_check_command="jq .access_token ~/.cache/pydrive2fs/*.apps.googleusercontent.com/default.json >& /dev/null"
+            auth_check_command="grep -Eq '\"access_token\": \"[a-zA-Z0-9.-]+\"' ~/.cache/pydrive2fs/${client_id}.apps.googleusercontent.com/default.json &> /dev/null"
             ;;
         rclone)
             domain="google.com/drive"
@@ -418,6 +419,5 @@ function print_ssh_tunnel_message {
     echo -e "3. Open auth url below in your browser on local machine${nc}\n"
 }
 ################################################################################
-
 
 main "$@"
