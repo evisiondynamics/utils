@@ -391,7 +391,7 @@ function auth_dvc {
         return 2
     fi
 
-    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" "53682"
+    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" 8090
     dvc status --cloud
 }
 
@@ -399,7 +399,7 @@ function auth_dvc {
 function auth_rclone {
     local target_remote="eagledrive"
 
-    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" "53682"
+    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" 53682
     echo "Logining in rclone to Eagle Google Drive..."
     rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
 }
@@ -414,7 +414,7 @@ function print_ssh_tunnel_message {
     echo -e "\n${yellow}To authenticate ${tool} on remote machine:"
     echo "1. Wait until ${tool} auth url is available below in terminal"
     echo "2. Open ssh tunnel, run this command on your local machine and leave it hanging (no output):"
-    echo "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l <username_on_remote> <remote_host_or_ip>"
+    echo "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l ${USER?} <remote_hostname>"
     echo -e "3. Open auth url below in your browser on local machine${nc}\n"
 }
 ################################################################################
