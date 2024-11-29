@@ -257,7 +257,7 @@ function check_auth {
             ;;
         rclone)
             domain="google.com/drive"
-            auth_check_command="rclone config show eagledrive >& /dev/null"
+            auth_check_command="rclone config show eagledrive | grep -iq '^token = '"
             ;;
         ffmpeg)
             domain="-"
