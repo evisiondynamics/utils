@@ -97,9 +97,9 @@ function install_tool {
         3)  echo "$tool version v$curr_version is lower than required v$version. Uninstall $tool manually and re-run setup"
             return 3
             ;;
-        4)  echo "$tool is installed, but not authenticated. Proceeding with authentication..."
+        4)  echo -e "$tool is installed, but not authenticated. Proceeding with authentication...\n"
             local auth_status
-            if [[ $check_msg != *"-"* && $(type -t "auth_${tool}") == "function" ]]; then
+            if [[ $check_msg != "-" && $(type -t "auth_${tool}") == "function" ]]; then
                 eval "auth_${tool} $token"
                 auth_status=$?
             fi
@@ -391,7 +391,7 @@ function auth_dvc {
         return 2
     fi
 
-    [[ -n $SSH_CONNECTION ]] && print_ssh_tunnel_message "rclone" "53682"
+    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" "53682"
     dvc status --cloud
 }
 
@@ -399,7 +399,7 @@ function auth_dvc {
 function auth_rclone {
     local target_remote="eagledrive"
 
-    [[ -n $SSH_CONNECTION ]] && print_ssh_tunnel_message "rclone" "53682"
+    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" "53682"
     echo "Logining in rclone to Eagle Google Drive..."
     rclone config create "${target_remote}" drive scope drive.readonly config_refresh_token true
 }
