@@ -34,7 +34,7 @@ function main {
     check_tool jq             ;status=$((status + $?))
     check_tool yq 4.44.3      ;status=$((status + $?))
     check_tool docker 27.3.0  ;status=$((status + $?))
-    check_tool dvc 3.56.0     ;status=$((status + $?))
+    check_tool dvc            ;status=$((status + $?))
     check_tool rclone         ;status=$((status + $?))
     check_tool ffmpeg         ;status=$((status + $?))
 
