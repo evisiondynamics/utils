@@ -3,8 +3,8 @@
 # Script to check/setup/authenticate common system tools: git, gh, dvc, docker, rclone, jq, yq, ffmpeg
 #
 # Command line args:
-# <_>    - if nor args, check each tol if installed and authenticated
-# <name> - install and authenticate tool by name
+# <_>    - if no args provided, check each tool if it is installed and authenticated
+# <name> - install and authenticate a tool by its name
 
 set -o nounset
 
@@ -328,12 +328,12 @@ function auth_git {
     ssh-keygen -b 2048 -t rsa -f ~/.ssh/eagle_github -q -N ""
     ls -alF ~/.ssh/eagle_github*
     if gh auth status >& /dev/null; then
-        echo "Adding puglic key to github.com via gh"
+        echo "Adding public key to github.com via gh"
         gh ssh-key add --title eagle ~/.ssh/eagle_github.pub
     else
         echo "Copy ~/.ssh/eagle_github.pub key below to clipboard"
         cat ~/.ssh/eagle_github.pub
-        echo "Paste the key manually to github.com/settings/ssh/new and press Save"
+        echo "Paste the key manually at https://github.com/settings/ssh/new and press Save"
         echo "Re-run setup again"
     fi
 }
