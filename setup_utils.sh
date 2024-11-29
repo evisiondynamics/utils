@@ -253,7 +253,7 @@ function check_auth {
             ;;
         dvc)
             domain="google.com/drive"
-            auth_check_command="dvc status --cloud >& /dev/null"
+            auth_check_command="jq .access_token ~/.cache/pydrive2fs/*.apps.googleusercontent.com/default.json >& /dev/null"
             ;;
         rclone)
             domain="google.com/drive"
