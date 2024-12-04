@@ -241,7 +241,7 @@ function check_auth {
     case "$tool" in
         git)
             domain="github.com"
-            auth_check_command="ssh -T git@github.com 2>&1 | grep -iq successfully"
+            auth_check_command="ssh -T git@$domain 2>&1 | grep -iq successfully"
             ;;
         gh)
             domain="github.com"
@@ -252,9 +252,10 @@ function check_auth {
             auth_check_command="docker login $domain <&- 2>&1 | grep -iq succeeded"
             ;;
         dvc)
-            client_id=$([[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*")
+            client_id=$( [[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*" )
+            cache_dir=$( [[ $(uname) == "Darwin" ]] && echo "$HOME/Library/Caches" || echo "$HOME/.cache" )
             domain="google.com/drive"
-            auth_check_command="grep -Eq '\"access_token\": \"[a-zA-Z0-9.-]+\"' ~/.cache/pydrive2fs/${client_id}.apps.googleusercontent.com/default.json &> /dev/null"
+            auth_check_command="grep -Eq '\"access_token\": \"\S+\"' ${cache_dir}/pydrive2fs/${client_id}.apps.googleusercontent.com/default.json &> /dev/null"
             ;;
         rclone)
             domain="google.com/drive"
