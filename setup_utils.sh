@@ -269,10 +269,10 @@ function check_auth {
             auth_check_command="docker login $domain <&- 2>&1 | grep -i -q succeeded"
             ;;
         dvc)
-            client_id=$( [[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*" )
+            client_id=$( [[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*.apps.googleusercontent.com" )
             cache_dir=$( [[ $(uname) == "Darwin" ]] && echo "$HOME/Library/Caches" || echo "$HOME/.cache" )
             domain="google.com/drive"
-            auth_check_command="grep -E -q '\"access_token\": \"\S+\"' ${cache_dir}/pydrive2fs/${client_id}.apps.googleusercontent.com/default.json"
+            auth_check_command="grep -Es -q '\"access_token\": \"\S+\"' ${cache_dir}/pydrive2fs/${client_id}/default.json"
             ;;
         rclone)
             domain="google.com/drive"
