@@ -122,7 +122,7 @@ function install_tool {
             else
                 echo "$tool v$curr_version is already installed"
             fi
-            # return $check_status
+            return $check_status
             ;;
         1)  ;;  # not installed, proceed with installation
         2)  echo "Failed to parse version '$tool --version'. Uninstall $tool manually and re-run setup"
@@ -266,7 +266,7 @@ function check_auth {
             ;;
         docker)
             domain="ghcr.io"
-            auth_check_command="docker login $domain <&- 2>&1 | grep -i -q succeeded"
+            auth_check_command="docker login $domain 2>&1 | grep -i -q succeeded"
             ;;
         dvc)
             client_id=$( [[ -f .dvc/config ]] && echo $(dvc config remote.gdrive.gdrive_client_id) || echo "*.apps.googleusercontent.com" )
@@ -433,8 +433,8 @@ function print_ssh_tunnel_message {
     local nc="\033[0m"
     echo -e "\n${yellow}To authenticate ${tool} on remote machine:"
     echo "1. Wait until ${tool} auth url is available below in terminal"
-    echo "2. Open ssh tunnel, run this command on your local machine and leave it hanging after password prompt (no output):"
-    echo "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l ${USER?} <remote_hostname>"
+    echo "2. Open ssh tunnel, run this command on your local machine and leave it hanging after (no output) password prompt:"
+    echo "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l <remote_username> <remote_hostname>"
     echo -e "3. Open auth url below in your browser on local machine${nc}\n"
 }
 ################################################################################
