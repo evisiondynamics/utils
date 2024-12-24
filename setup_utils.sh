@@ -187,7 +187,7 @@ function install_tool {
         echo "Downloading $url"
         curl --show-error --fail --output ~/.local/bin/yq --location "$url"
         [[ $? -ne 0 ]] && exit 2
-        chmod +x ~/.local/bin/tq
+        chmod +x ~/.local/bin/yq
         return 0
     fi
 
