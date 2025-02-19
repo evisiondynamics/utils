@@ -183,7 +183,7 @@ function install_tool {
             echo "export PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
         fi
 
-        local url="https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64"
+        local url="https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_$(dpkg --print-architecture)"
         echo "Downloading $url"
         curl --show-error --fail --output ~/.local/bin/yq --location "$url"
         [[ $? -ne 0 ]] && exit 2
@@ -411,7 +411,7 @@ function auth_dvc {
         return 2
     fi
 
-    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "rclone" 8090
+    [[ -n ${SSH_CONNECTION:-} ]] && print_ssh_tunnel_message "dvc" 8080
     dvc status --cloud
 }
 
