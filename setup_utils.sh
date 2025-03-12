@@ -428,13 +428,15 @@ function auth_rclone {
 function print_ssh_tunnel_message {
     local tool=${1?Tool name is required as the first argument}
     local auth_protocol=${2?Localhost auth protocol is required as the second argument}
+    local username="${USER?}"
+    local ip="$(ip address show tun0 | awk '/inet / {print $2}')"
 
     local yellow="\033[0;33m"
     local nc="\033[0m"
     echo -e "\n${yellow}To authenticate ${tool} on remote machine:"
-    echo "1. Wait until ${tool} auth url is available below in terminal"
-    echo "2. Open ssh tunnel, run this command on your local machine and leave it hanging after (no output) password prompt:"
-    echo "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l <remote_username> <remote_hostname>"
+    echo -e "1. Wait until ${tool} auth url is available below in terminal"
+    echo -e "2. Open ssh tunnel, run this command on your local machine and leave it hanging after (no output) password prompt:"
+    echo -e "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l ${username} ${ip}"
     echo -e "3. Open auth url below in your browser on local machine${nc}\n"
 }
 ################################################################################
