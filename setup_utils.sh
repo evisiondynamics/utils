@@ -38,6 +38,8 @@ function main {
     check_tool rclone         ;status=$((status + $?))
     check_tool ffmpeg         ;status=$((status + $?))
 
+    setup_nvidia_toolkit
+
     echo ""
     return $status
 }
@@ -162,21 +164,6 @@ function install_tool {
                 sudo usermod --append --groups docker "$USER"
                 newgrp docker
                 docker run hello-world
-
-                # install nvidia container tool if nvidia card is available
-                if lspci | grep -qi nvidia; then
-                    if ! apt-cache show nvidia-container-toolkit &> /dev/null; then
-                        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-                            sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-                        curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-                            sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-                            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-                        sudo apt-get update --yes --quiet
-                    fi
-                    if ! dpkg -l | grep -qi nvidia-container-toolkit; then
-                        sudo apt-get install --yes nvidia-container-toolkit
-                    fi
-                fi
                 return 0
                 ;;
             Darwin*)
@@ -471,6 +458,32 @@ function print_ssh_tunnel_message {
     echo -e "   ssh -L ${auth_protocol}:localhost:${auth_protocol} -C -N -l ${username} ${ip}"
     echo -e "3. Open auth url below in your browser on local machine${nc}\n"
 }
+
+
+################################################################################
+################################ nvidia ########################################
+################################################################################
+
+function setup_nvidia_toolkit {
+    if ! command_exists docker; then
+        return 0
+    fi
+
+    # install nvidia container tool if nvidia card is available
+    if lspci | grep -qi nvidia && ! dpkg -s nvidia-container-toolkit &> /dev/null; then
+        echo -e "\nSetup nvidia-container-toolkit:"
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+            sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+        curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+            sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        sudo apt-get update --yes -qq
+        sudo apt-get install --yes --quiet nvidia-container-toolkit
+    fi
+}
+
+
+
 ################################################################################
 
 main "$@"
