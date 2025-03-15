@@ -147,20 +147,50 @@ function install_tool {
     echo -e "\nInstalling $tool..."
 
     # special case for docker
-    # TODO: docker install script
     if [[ $tool == "docker" ]]; then
         grep -q WSL /proc/version && os="WSL"  # in Windows, docker must be installed on Windows host, not on WSL Ubuntu
         case "$os" in
             Linux*)
-                url="https://docs.docker.com/engine/install/ubuntu/" ;;
+                sudo apt-get update --yes --quiet
+                sudo apt-get install --yes --quiet apt-transport-https ca-certificates curl software-properties-common lsb-release
+                curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+                sudo add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                sudo apt-get update --yes --quiet
+                sudo apt-get install --yes --quiet docker-ce docker-ce-cli containerd.io
+                sudo systemctl --now enable docker
+                sudo groupadd docker
+                sudo usermod --append --groups docker "$USER"
+                newgrp docker
+                docker run hello-world
+
+                # install nvidia container tool if nvidia card is available
+                if lspci | grep -qi nvidia; then
+                    if ! apt-cache show nvidia-container-toolkit &> /dev/null; then
+                        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+                            sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+                        curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+                            sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+                            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+                        sudo apt-get update --yes --quiet
+                    fi
+                    if ! dpkg -l | grep -qi nvidia-container-toolkit; then
+                        sudo apt-get install --yes nvidia-container-toolkit
+                    fi
+                fi
+                return 0
+                ;;
             Darwin*)
-                url="https://docs.docker.com/docker-for-mac/install/" ;;
+                url="https://docs.docker.com/docker-for-mac/install/"
+                echo "Install docker manually $url"
+                return 0
+                ;;
             WSL*)
-                url="https://docs.docker.com/desktop/setup/install/windows-install/" ;;
+                url="https://docs.docker.com/desktop/setup/install/windows-install/"
+                echo "Install docker manually $url"
+                return 0
+                ;;
             *) echo "$os not supported" ;;
         esac
-        echo "Install docker manually $url"
-        return 0
     fi
 
     # special case for gh
@@ -174,6 +204,7 @@ function install_tool {
         echo "deb [$gh_deb] https://cli.github.com/packages stable main" | \
             sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
         sudo apt update --yes --quiet
+        # no return, gh is installed via apt below
     fi
 
     # special case for yq
@@ -199,6 +230,7 @@ function install_tool {
         sudo install -o root -g root -m 644 packages.iterative.gpg /etc/apt/trusted.gpg.d/
         rm -f packages.iterative.gpg
         sudo apt update --yes --quiet
+        # no return, gh is installed via apt below
     fi
 
     case "$os" in
@@ -218,7 +250,7 @@ function install_tool {
             ;;
 
         Darwin*)
-            version=${version:+=$version}  # replace with "@$version" if $version defined
+            version=${version:+=$version}  # replace with "=$version" if $version defined
             brew install "$tool$version"  # WARNING: brew does not keep older releases
             [[ -n "$version" ]] && brew pin "$tool"
             ;;
